@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_status.html" import badge %}
+{% block title %}{{ dev.host }} · Monitor Dashboard{% endblock %}
+{% block content %}
+<a href="{{ url_for('dashboard', client=client.id if current_user.is_admin else None, type=dev.type) }}"
+   class="text-sm text-sky-700 hover:underline">&larr; {{ client.name }} · {{ type_label }}</a>
+
+<div class="flex flex-wrap items-center gap-3 mt-2 mb-6">
+  <h1 class="text-2xl font-semibold">{{ dev.host }}</h1>
+  {{ badge(status) }}
+</div>
+
+<dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+  <div class="bg-white rounded-lg shadow p-4"><dt class="text-sm text-slate-500">Last seen</dt>
+    <dd class="font-medium">{{ last_seen_ago }} <span class="text-slate-500 text-sm">({{ last_seen_local }})</span></dd></div>
+  <div class="bg-white rounded-lg shadow p-4"><dt class="text-sm text-slate-500">First seen</dt>
+    <dd class="font-medium">{{ first_seen_local }}</dd></div>
+  <div class="bg-white rounded-lg shadow p-4"><dt class="text-sm text-slate-500">Type</dt>
+    <dd class="font-medium">{{ type_label }}</dd></div>
+</dl>
+
+<h2 class="text-lg font-semibold mb-2">History <span class="text-sm font-normal text-slate-500">(last {{ history|length }} readings)</span></h2>
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-left">
+      <tr>
+        <th class="px-3 py-2 font-medium whitespace-nowrap">Collected</th>
+        {% for c in columns %}<th class="px-3 py-2 font-medium whitespace-nowrap">{{ c }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in history %}
+      <tr class="border-t border-slate-100">
+        <td class="px-3 py-2 whitespace-nowrap">{{ h.when }}</td>
+        {% for c in columns %}<td class="px-3 py-2 whitespace-nowrap">{{ h.cells.get(c, "") }}</td>{% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

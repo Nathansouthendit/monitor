@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Monitor Dashboard{% endblock %}
+{% block content %}
+<div class="max-w-sm mx-auto mt-16 bg-white rounded-lg shadow p-6">
+  <h1 class="text-xl font-semibold mb-4">Sign in</h1>
+  <form method="post" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="block">
+      <span class="text-sm text-slate-600">Username</span>
+      <input name="username" autocomplete="username" required autofocus
+             class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Password</span>
+      <input name="password" type="password" autocomplete="current-password" required
+             class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+    </label>
+    <button class="w-full bg-slate-900 text-white rounded py-2 hover:bg-slate-700">Sign in</button>
+  </form>
+</div>
+{% endblock %}

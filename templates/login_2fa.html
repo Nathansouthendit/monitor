@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Verification code · Monitor Dashboard{% endblock %}
+{% block content %}
+<div class="max-w-sm mx-auto mt-16 bg-white rounded-lg shadow p-6">
+  <h1 class="text-xl font-semibold mb-1">Verification code</h1>
+  <p class="text-sm text-slate-500 mb-4">Enter the 6-digit code from your authenticator app.</p>
+  <form method="post" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="block">
+      <span class="text-sm text-slate-600">Code</span>
+      <input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7"
+             autocomplete="one-time-code" required autofocus
+             class="mt-1 w-full rounded border border-slate-300 px-3 py-2 tracking-widest text-lg">
+    </label>
+    <button class="w-full bg-slate-900 text-white rounded py-2 hover:bg-slate-700">Verify</button>
+  </form>
+  <p class="mt-4 text-sm"><a href="{{ url_for('login') }}" class="text-sky-700 hover:underline">Start again</a></p>
+</div>
+{% endblock %}

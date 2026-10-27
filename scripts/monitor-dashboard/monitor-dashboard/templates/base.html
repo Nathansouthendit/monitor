@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}">{% endif %}
+  <title>{% block title %}Monitor Dashboard{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+  {% if current_user.is_authenticated %}
+  <header class="bg-slate-900 text-white">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="{{ url_for('dashboard') }}" class="font-semibold">Monitor Dashboard</a>
+      <form method="post" action="{{ url_for('logout') }}" class="flex items-center gap-3 text-sm">
+        <span class="text-slate-300">{{ current_user.username }}</span>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Log out</button>
+      </form>
+    </div>
+  </header>
+  {% endif %}
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    {% for msg in get_flashed_messages() %}
+      <div class="mb-4 rounded bg-red-100 text-red-800 px-4 py-2">{{ msg }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

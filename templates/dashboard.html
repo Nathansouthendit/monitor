@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_status.html" import badge %}
+{% from "_sections.html" import render_sections %}
+{% block content %}
+
+{% if clients %}
+<nav class="flex flex-wrap gap-2 mb-6" aria-label="Clients">
+  {% for c in clients %}
+    {% set active = client and c.id == client.id %}
+    <a href="{{ url_for('dashboard', client=c.id) }}"
+       {% if active %}aria-current="page"{% endif %}
+       class="px-4 py-2 rounded-full text-sm font-medium border
+              {{ 'bg-slate-900 text-white border-slate-900' if active
+                 else 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50' }}">
+      {{ c.name }}
+    </a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+<div class="flex flex-wrap items-end justify-between gap-2 mb-4">
+  <h1 class="text-2xl font-semibold">{{ client.name if client else "No clients yet" }}</h1>
+  {% if client %}
+  <p class="text-sm text-slate-500">
+    Last report received: {{ last_report or "never" }} · refreshes every {{ refresh }}s
+  </p>
+  {% endif %}
+</div>
+
+{% if client and summary and summary.total %}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="bg-white rounded-lg shadow p-4">
+    <p class="text-sm text-slate-500">Devices</p><p class="text-2xl font-semibold">{{ summary.total }}</p></div>
+  <div class="bg-white rounded-lg shadow p-4">
+    <p class="text-sm text-slate-500">Online</p><p class="text-2xl font-semibold text-emerald-700">{{ summary.online }}</p></div>
+  <div class="bg-white rounded-lg shadow p-4 {{ 'ring-2 ring-amber-400' if summary.attention }}">
+    <p class="text-sm text-slate-500">Needs attention</p><p class="text-2xl font-semibold {{ 'text-amber-700' if summary.attention }}">{{ summary.attention }}</p></div>
+  <div class="bg-white rounded-lg shadow p-4 {{ 'ring-2 ring-red-400' if summary.offline }}">
+    <p class="text-sm text-slate-500">Offline</p><p class="text-2xl font-semibold {{ 'text-red-700' if summary.offline }}">{{ summary.offline }}</p>
+    {% if summary.not_seen %}<p class="text-xs text-slate-500 mt-1">+ {{ summary.not_seen }} PC(s) not seen</p>{% endif %}</div>
+</div>
+
+<nav class="flex flex-wrap gap-1 border-b border-slate-300 mb-4" aria-label="Device types">
+  {% for t in tabs %}
+    {% set active = t.type == active_type %}
+    <a href="{{ url_for('dashboard', client=client.id if clients else None, type=t.type) }}"
+       {% if active %}aria-current="page"{% endif %}
+       class="px-4 py-2 -mb-px border-b-2 text-sm font-medium
+              {{ 'border-slate-900 text-slate-900' if active else 'border-transparent text-slate-500 hover:text-slate-800' }}">
+      {{ t.label }} <span class="text-slate-400">{{ t.count }}</span>
+      {% if t.problems %}<span class="ml-1 rounded-full {{ 'bg-red-600 text-white' if t.red else 'bg-amber-400 text-amber-950' }} text-xs px-1.5">{{ t.problems }}</span>{% endif %}
+    </a>
+  {% endfor %}
+</nav>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-left">
+      <tr>
+        <th class="px-3 py-2 font-medium">Status</th>
+        <th class="px-3 py-2 font-medium">Device</th>
+        <th class="px-3 py-2 font-medium whitespace-nowrap">Last seen</th>
+        {% for c in columns %}<th class="px-3 py-2 font-medium whitespace-nowrap">{{ c }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in devices %}
+      <tr class="border-t border-slate-100 {{ 'bg-red-50' if d.status in ('offline', 'critical') else ('bg-amber-50' if d.status == 'warning') }}">
+        <td class="px-3 py-2">{{ badge(d.status) }}</td>
+        <td class="px-3 py-2 whitespace-nowrap font-medium">
+          <a class="text-sky-700 hover:underline" href="{{ url_for('device_detail', device_id=d.id) }}">{{ d.host }}</a></td>
+        <td class="px-3 py-2 whitespace-nowrap" title="{{ d.last_seen_local }}">{{ d.last_seen_ago }}</td>
+        {% for c in columns %}<td class="px-3 py-2 {{ 'min-w-[16rem] whitespace-normal text-amber-900' if c == 'Issues' else 'whitespace-nowrap' }}">{{ d.cells.get(c, "") }}</td>{% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% for block in detail_blocks %}
+<section class="mt-8" aria-label="{{ block.host }} details">
+  {% if detail_blocks|length > 1 %}<h2 class="text-lg font-semibold mb-3">{{ block.host }}</h2>{% endif %}
+  {{ render_sections(block.sections) }}
+</section>
+{% endfor %}
+
+{% elif client %}
+  <p class="bg-white rounded-lg shadow p-6 text-slate-600">
+    No data received yet. Devices appear here once the site's relay posts to <code>/api/ingest</code>.
+  </p>
+{% endif %}
+{% endblock %}

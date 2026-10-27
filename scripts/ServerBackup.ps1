@@ -1,0 +1,1 @@
+﻿Start-WBBackup -Policy $policy

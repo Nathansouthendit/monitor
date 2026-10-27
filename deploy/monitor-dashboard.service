@@ -1,0 +1,30 @@
+# /etc/systemd/system/monitor-dashboard.service
+# sudo systemctl daemon-reload && sudo systemctl enable --now monitor-dashboard
+[Unit]
+Description=Monitor Dashboard
+After=network.target
+
+[Service]
+User=monitor
+Group=monitor
+WorkingDirectory=/opt/monitor-dashboard
+EnvironmentFile=/etc/monitor-dashboard.env
+ExecStart=/opt/monitor-dashboard/.venv/bin/gunicorn -w 3 -b 127.0.0.1:8001 --access-logfile - app:app
+Restart=on-failure
+
+# Sandboxing: the app can only write to its database folder
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/monitor-dashboard
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

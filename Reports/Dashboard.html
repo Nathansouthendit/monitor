@@ -1,0 +1,404 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<title>Dashboard - YMCA-HOST-02</title>
+
+
+
+<style>
+body { 
+    background:#fafafa; 
+    color:#1a1a1a; 
+    font-family:Segoe UI; 
+    margin:20px; 
+}
+
+/* Grid */
+
+
+
+.grid {
+    display:grid;
+    grid-template-columns: repeat(4, 200px);
+    gap:15px;
+}
+
+
+/* Tiles */
+.tile { 
+    padding:20px; 
+    border-radius:12px; 
+    text-align:center; 
+    font-weight:600; 
+    background:#ffffff; 
+    border:1px solid #e5e5e5;
+    box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* Status colours — modern tones */
+.green { background:#4CCB5F; color:white; }
+.orange { background:#FFB347; color:white; }
+.red { background:#FF6B6B; color:white; }
+
+/* Time buttons */
+.timeBtn {
+    padding:8px 12px;
+    background:#ffffff;
+    border:1px solid #d0d0d0;
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+    color:#1a1a1a;
+    transition:0.2s;
+}
+
+.timeBtn:hover {
+    background:#f0f0f0;
+}
+
+.timeBtn.active {
+    background:#3A7AFE;
+    color:white;
+    border-color:#3A7AFE;
+}
+
+/* Cards */
+.card { 
+    background:#ffffff; 
+    padding:15px; 
+    margin-top:20px; 
+    border-radius:12px; 
+    border:1px solid #e5e5e5;
+    box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* Tables */
+table { 
+    width:100%; 
+    border-collapse:collapse; 
+}
+
+th { 
+    background:#f0f0f0; 
+    color:#1a1a1a;
+    font-weight:600;
+}
+
+th, td { 
+    padding:8px; 
+    border-bottom:1px solid #e0e0e0;
+}
+
+th, td {
+    text-align:left;
+    white-space:nowrap;
+}
+
+
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Dashboard - YMCA-HOST-02</h1>
+<p>Updated: 07/31/2026 13:04:56</p>
+
+<div id="timeList" style="display:flex; gap:10px; overflow-x:auto; margin-bottom:15px;"></div>
+<p id="selectedTime"></p>
+<h1> Host Server Performance Stats</h1>
+<div class="grid">
+  <div id="cpuTile" class="tile"></div>
+  <div id="memTile" class="tile"></div>
+  <div id="backupTile" class="tile"></div>
+  <div id="diskTile" class="tile"></div> 
+
+
+</div>
+
+
+<div class="card" id="eventTable"></div>
+
+
+<div class="card" id="vmTable"></div>
+
+
+
+<h1> Virtual Servers Performance Stats</h1>
+<div class="card" id="vmDiskTable"></div>
+<div class="card" id="vmUpdateTable"></div>
+
+<script>
+
+// ✅ Map history with filenames
+const history = .map(h => ({
+    ...h.Data,
+    FileName: h.FileName
+}));
+
+const timeList = document.getElementById("timeList");
+const selectedTime = document.getElementById("selectedTime");
+
+const cpuTile = document.getElementById("cpuTile");
+const memTile = document.getElementById("memTile");
+const backupTile = document.getElementById("backupTile");
+const diskTile = document.getElementById("diskTile");
+const vmTable = document.getElementById("vmTable");
+
+const eventTable = document.getElementById("eventTable");
+
+const vmDiskTable = document.getElementById("vmDiskTable");
+const vmUpdateTable = document.getElementById("vmUpdateTable");
+
+
+
+function parseJsonField(field){
+
+    if (!field) return null;
+
+    try {
+        let cleaned = field;
+
+        // Remove outer quotes
+        cleaned = cleaned.replace(/^"(.*)"$/, '');
+
+        // Fix escaped quotes
+        cleaned = cleaned.replace(/""/g, '"');
+
+        // FIX: handle backslash escaping
+        cleaned = cleaned.replace(/\\"/g, '"');
+
+        return JSON.parse(cleaned);
+
+    } catch (e) {
+        console.log("Parse error:", e, field);
+        return null;
+    }
+}
+
+// ✅ Format
+function formatDate(ts){
+    const d = new Date(ts);
+    return isNaN(d) ? "Invalid" :
+        d.toLocaleDateString('en-GB') + " " +
+        d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ✅ Tables
+function buildTable(data, customOrder){
+    if(!data || !Array.isArray(data)) return "<p>No data</p>";
+
+    let columns;
+
+    if(customOrder){
+        columns = customOrder;
+    } else {
+        const columnSet = new Set();
+        data.forEach(r => Object.keys(r).forEach(k => columnSet.add(k)));
+        columns = Array.from(columnSet);
+    }
+
+    let html = "<table><thead><tr>";
+
+    columns.forEach(col => html += "<th>"+col+"</th>");
+
+    html += "</tr></thead><tbody>";
+
+    data.forEach(row => {
+        html += "<tr>";
+        columns.forEach(col => html += "<td>"+(row[col] ?? "")+"</td>");
+        html += "</tr>";
+    });
+
+    return html + "</tbody></table>";
+}
+
+// ✅ Time selector (NEW)
+function buildTimeSelector(){
+
+    history.forEach((item,index)=>{
+        const btn=document.createElement("div");
+        btn.className="timeBtn";
+
+        const parts=item.FileName.replace("stats_","").replace(".csv","").split("_");
+
+        btn.innerText =
+            parts[0].split("-").reverse().join("/")+" "+
+            parts[1].replace("-",":");
+
+        btn.onclick=()=>{
+            updateView(index);
+            document.querySelectorAll(".timeBtn").forEach(b=>b.classList.remove("active"));
+            btn.classList.add("active");
+        };
+
+        timeList.appendChild(btn);
+    });
+
+    if(history.length>0){
+        timeList.lastChild.classList.add("active");
+        updateView(history.length-1);
+    }
+}
+
+// ✅ Update dashboard
+
+function updateView(i){
+
+    const d = history[i];
+
+    selectedTime.innerText = "Selected: " + formatDate(d.Timestamp);
+
+    // ✅ CPU + Memory
+    cpuTile.innerHTML = "CPU<br>" + (parseFloat(d.CPU_Load) || 0) + "%";
+    memTile.innerHTML = "Memory<br>" + (parseFloat(d.Memory_UsedGB) || 0) + " GB";
+
+    // ✅ BACKUP TILE
+    const b = parseJsonField(d.Backup_Status);
+    const last = b?.LastSuccessful;
+
+    if (last && last !== null && last !== "" && last !== "0001-01-01T00:00:00") {
+        backupTile.className = "tile green";
+        backupTile.innerHTML = "Backup<br>" + formatDate(last);
+    } else {
+        backupTile.className = "tile red";
+        backupTile.innerHTML = "Backup<br>No Backup Configured";
+    }
+
+    // ✅ TABLES
+    vmTable.innerHTML =
+        "<h2>VMs</h2>" +
+        buildTable(parseJsonField(d.VM_Details));
+
+
+
+
+const events = JSON.parse(
+    new DOMParser().parseFromString(d.Events_JSON, "text/html").documentElement.textContent
+);
+
+
+eventTable.innerHTML =
+    "<h2>Events</h2>" +
+    (events ? buildTable(events, ["System","TimeCreated","Id","Level","Message"]) : "<p>No events available</p>");
+
+
+
+    vmDiskTable.innerHTML =
+        "<h2>VM Disk Status</h2>" +
+        buildTable(parseJsonField(d.VM_Disk_Details));
+
+// ✅ COMBINED HOST + VM UPDATES
+
+const hostUpdates = parseJsonField(d.Host_Update_Details);
+const vmUpdates   = parseJsonField(d.VM_Update_Details);
+
+let combined = [];
+
+// ✅ Add HOST
+if (hostUpdates && Array.isArray(hostUpdates)){
+    hostUpdates.forEach(u=>{
+        combined.push({
+            System: "HOST",
+            Title: u.Title,
+            Status: u.Status,
+            SizeMB: u.SizeMB,
+            Reboot: u.Reboot
+        });
+    });
+}
+
+// ✅ Add VMs
+if (vmUpdates && Array.isArray(vmUpdates)){
+    vmUpdates.forEach(u=>{
+        combined.push({
+            System: u.VM,
+            Title: u.Title,
+            Status: u.Status,
+            SizeMB: u.SizeMB,
+            Reboot: u.Reboot
+        });
+    });
+}
+
+// ✅ Enhance (colour + icons)
+combined = combined.map(r => {
+
+    let rebootIcon = r.Reboot === "YES" ? "🔴 YES" : "✅ No";
+
+    let severityColor = "green";
+    if (r.Status !== "Success" && r.Title !== "Up to date") {
+        severityColor = "orange";
+    }
+
+    return {
+        System: r.System,
+        Title: r.Title,
+        Status: r.Status,
+        SizeMB: r.SizeMB,
+        Reboot: rebootIcon,
+        Severity: severityColor.toUpperCase()
+    };
+});
+
+// ✅ Render
+vmUpdateTable.innerHTML =
+    "<h2>Combined Update Status</h2>" +
+    buildTable(combined, ["System","Title","Status","SizeMB","Reboot","Severity"]);
+
+    // ✅ DISK TILE (FIXED + SAFE)
+    const disks = parseJsonField(d.Disk_Free);
+
+    if (disks && Array.isArray(disks) && disks.length > 0) {
+
+        let totalFree = 0;
+
+        disks.forEach(x => {
+            totalFree += parseFloat(x.FreeGB || 0);
+        });
+
+        diskTile.innerHTML = "Disk Free<br>" + totalFree.toFixed(1) + " GB";
+
+        if (totalFree < 50) {
+            diskTile.className = "tile red";
+        }
+        else if (totalFree < 100) {
+            diskTile.className = "tile orange";
+        }
+        else {
+            diskTile.className = "tile green";
+        }
+
+    } else {
+        diskTile.className = "tile red";
+        diskTile.innerHTML = "Disk<br>No Data";
+    }
+}
+// ✅ Build selector on load
+buildTimeSelector();
+
+
+function parseDotNetDate(val){
+
+    if (!val) return "";
+
+    // Match /Date(123456789)/
+    const match = /\/Date\((\d+)\)\//.exec(val);
+
+    if (match){
+        const ms = parseInt(match[1], 10);
+        const d = new Date(ms);
+
+        return d.toLocaleDateString('en-GB') + " " +
+               d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    }
+
+    return val;
+}
+
+</script>
+
+</body>
+</html>

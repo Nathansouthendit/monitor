@@ -1,0 +1,11 @@
+Client 'Test School' created.
+API key (store it now, it won't be shown again):
+S-jhlBjkGr_kHjKuux5AMrfXRZL6heLV7qnY8Z7_tjA
+
+Client 'Eastwood' created.
+API key (store it now, it won't be shown again):
+AchusWvrl1L726Pgei358Zc0xLZ8jMMq0XV5ZU4-j4o
+
+Client 'YMCA' created.
+API key (store it now, it won't be shown again):
+iCo5jK6GlQQgg53imnV9Zpt0sAN7xwAKSveZEJhghA4

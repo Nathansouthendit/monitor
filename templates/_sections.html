@@ -1,0 +1,44 @@
+{% macro render_sections(sections) %}
+  {% for sec in sections %}
+  <details class="bg-white rounded-lg shadow mb-3 group" {% if sec.rows and (sec.problems or sec.rows|length <= 25) or sec.error %}open{% endif %}>
+    <summary class="cursor-pointer select-none px-4 py-3 flex flex-wrap items-center gap-2 font-medium">
+      <span class="text-slate-400 group-open:rotate-90 transition-transform">&#9656;</span>
+      {{ sec.title }}
+      <span class="text-sm font-normal text-slate-500">{{ sec.rows|length }}</span>
+      {% if sec.error %}<span class="rounded-full bg-red-100 text-red-800 text-xs px-2 py-0.5">error</span>
+      {% elif sec.problems %}<span class="rounded-full bg-amber-100 text-amber-900 text-xs px-2 py-0.5">{{ sec.problems }} need attention</span>{% endif %}
+    </summary>
+    <div class="px-4 pb-4">
+      {% if sec.error %}<p class="text-sm text-red-700 mb-2">{{ sec.error }}</p>{% endif %}
+      {% if sec.note %}<p class="text-sm text-slate-500 mb-2">{{ sec.note }}</p>{% endif %}
+      {% if sec.rows %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-left">
+            <tr>
+              {% for c in sec.columns %}<th class="px-3 py-2 font-medium whitespace-nowrap">{{ c }}</th>{% endfor %}
+              {% if sec.has_links %}<th class="px-3 py-2"><span class="sr-only">Link</span></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in sec.rows %}
+            <tr class="border-t border-slate-100 {{ 'bg-red-50' if r.flag == 'red' else ('bg-amber-50' if r.flag == 'amber') }}">
+              {% for c in sec.columns %}
+              <td class="px-3 py-2 align-top {{ 'min-w-[16rem] whitespace-normal' if c in ('Issues','Title','Impact','Message') else 'whitespace-nowrap' }}"
+                  {% if r.full[c] != r.cells[c] %}title="{{ r.full[c] }}"{% endif %}>{{ r.cells[c] }}</td>
+              {% endfor %}
+              {% if sec.has_links %}
+              <td class="px-3 py-2 whitespace-nowrap">{% if r.link %}<a href="{{ r.link }}" target="_blank" rel="noopener noreferrer" class="text-sky-700 hover:underline">Open &#8599;</a>{% endif %}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% elif not sec.error %}
+      <p class="text-sm text-emerald-700">Nothing to report.</p>
+      {% endif %}
+    </div>
+  </details>
+  {% endfor %}
+{% endmacro %}
